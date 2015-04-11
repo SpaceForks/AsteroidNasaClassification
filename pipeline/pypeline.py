@@ -6,6 +6,7 @@ from nipype.interfaces.base import (
     TraitedSpec, BaseInterface,
     CommandLineInputSpec, CommandLine,
 )
+import nipype.interfaces.io as nio  
 
 import sys
 # HACK
@@ -54,23 +55,20 @@ class NodePrinter(BaseInterface):
 
 
 ### operational nodes
-class Classifier1Task_InputSpec(TraitedSpec):                                                                                                 
+class SimpleFileInputSpec(TraitedSpec):                                                                                                 
     filepath = traits.File(mandatory = True)
-
-class Classifier1Task_OutputSpec(TraitedSpec):
-    # json file
+class SimpleFileOutputSpec(TraitedSpec):
     filepath = traits.File()
 
-class Classifier1Task(BaseInterface):
-
-    input_spec = Classifier1Task_InputSpec
-    output_spec = Classifier1Task_OutputSpec
-
+class SingleIOTask(BaseInterface):
+    input_spec = SimpleFileInputSpec
+    output_spec = SimpleFileOutputSpec
     def _list_outputs(self):
         outputs = self.output_spec().get()
         outputs['filepath'] = self._output_filepath
         return outputs
 
+class Classifier1Task(SingleIOTask):
     def _run_interface(self, runtime):
         
         d = Classifier1.clean_data(Classifier1.smass_text_file_to_dataframe(self.inputs.filepath))
