@@ -80,8 +80,17 @@ class Classifier1Task(SingleIOTask):
         return runtime
 
 
+from lib import SMASS
+import matplotlib.pyplot as plt
 
+class PlotCurveTask(SingleIOTask):
+    def _run_interface(self, runtime):
+        d = SMASS.smass_text_file_to_dataframe(self.inputs.filepath)
+        plot = d.plot(kind='scatter', marker='.', x='wavelength', y='flux')
 
+        self._output_filepath = os.path.join(os.getcwd(), 'output.png')
+        plt.savefig(self._output_filepath)
+        return runtime
 
 
 
@@ -123,15 +132,22 @@ if __name__ == '__main__':
     nInputFileList.iterables = ('input_filepath', file_list)
     
     nClassifier1Task = pe.Node(interface = Classifier1Task(), name='classifier_1')
+    nPlotCurveTask = pe.Node(interface = PlotCurveTask(), name='curveplotter_1')
+    
+    nDataSink = pe.Node(interface=nio.DataSink(), name='datasink')
+    nDataSink.inputs.base_directory = '/tmp/asteroid-datasink'
     
     wf = pe.Workflow(name='test_workflow')
     wf.config['execution']['crashdump_dir'] = 'crashdump'
     wf.base_dir = '/tmp/wf-asteroid'
     
     wf.connect([
-        (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
+        # (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
         (nInputFileList, nClassifier1Task, [('input_filepath', 'filepath')]),
-        (nClassifier1Task, NodePrinter.create(), [('filepath', 'input')]),
+        (nInputFileList, nPlotCurveTask, [('input_filepath', 'filepath')]),
+        # (nClassifier1Task, NodePrinter.create(), [('filepath', 'input')]),
+        
+        (nClassifier1Task, nDataSink, [('filepath', 'result')]),
         ])
     wf.write_graph()
     res = wf.run()
