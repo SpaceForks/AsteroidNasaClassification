@@ -2,6 +2,15 @@ import os
 import jdcal
 import datetime
 
+def str_to_float_or_None(s):
+    '''
+    if empty string, return None, else float
+    '''
+    if len(s) is 0:
+        return None
+    else:
+        return float(s)
+
 def parse_file(input_filepath):
     output = []
     with open(input_filepath) as ifile:
@@ -34,8 +43,9 @@ def parse_file(input_filepath):
                 year, month, day, secfrac = jdcal.jd2gcal(jyear, jday)
                 date = datetime.datetime(year, month, day) + datetime.timedelta(0, secfrac*86400)
                 buf.append([str(date), float(magnitude),
-                            error_margin and float(error_margin) or None,
-                            airmass and float(airmass) or None])
+                            str_to_float_or_None(error_margin),
+                            str_to_float_or_None(airmass),
+                            ])
             else:
                 raise Exception('unknown state %s! typo?' % (state))
     return output
@@ -88,7 +98,6 @@ if __name__ == '__main__':
                 df_out = pd.concat(concat)
                 df_out.to_csv(output_filepath, index=False)
                 print('wrote: %s' % output_filepath)
-                sys.exit()
             elif args.type == 'json':
                 output_filepath = pjoin(args.output, filename + '.json')
                 with open(output_filepath, 'w') as ofile:
