@@ -1,6 +1,6 @@
 import os
 import jdcal
-from glob import glob
+import datetime
 
 def parse_file(input_filepath):
     output = []
@@ -29,19 +29,70 @@ def parse_file(input_filepath):
                 d[key] = val
             elif state == 'DATA':
                 julian_date, magnitude, error_margin, airmass = line.split('=')[1].split('|')
-                year = int(julian_date[:2])*10e4
-                day = float(julian_date[2:])
-                buf.append([jdcal.jd2gcal(year, day), float(magnitude), float(error_margin), float(airmass)])
+                jyear = int(julian_date[:2])*10e4
+                jday = float(julian_date[2:])
+                year, month, day, secfrac = jdcal.jd2gcal(jyear, jday)
+                date = datetime.datetime(year, month, day) + datetime.timedelta(0, secfrac*86400)
+                buf.append([str(date), float(magnitude),
+                            error_margin and float(error_margin) or None,
+                            airmass and float(airmass) or None])
             else:
-                raise Exception('unknown state! typo?')
+                raise Exception('unknown state %s! typo?' % (state))
+    return output
 
 
 if __name__ == '__main__':
-    filepath = '/tmp/ALCDEF/ALCDEF_100085_1992UY4_20150407_221242.txt'
-    out = parse_file(filepath)
-
 
     import sys
-    if '-json' in sys.argv:
-        import json
-        print json.dumps(out)
+    import argparse
+    from glob import glob
+    import json
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', help='a directory or a text file')
+    parser.add_argument('-o', '--output', help='a directory to output to, or -json, to print json to stdout')
+    parser.add_argument('-t', '--type', help='output type: json or csv', default='csv')
+    
+    args = parser.parse_args()
+
+    if any([args.input is None, args.output is None]):
+        parser.print_help()
+
+        print('''\
+        example call: python parse_ALCDEF.py -i path/to/ALCDEF -o path/to/outputdir -t csv
+
+        converts all files in path/to/ALCDEF to csv, and puts them in path/to/outputdir
+''')
+        sys.exit()
+
+    if args.type == 'csv':
+        import pandas as pd
+
+    from os.path import join as pjoin, exists as pexists, split as psplit, splitext as psplitext
+    if not pexists(args.output):
+        os.mkdir(args.output)
+
+    if args.input.endswith('.txt'):
+        out = parse_file(args.input)
+    elif pexists(args.input) and os.path.isdir(args.input):
+        for input_filepath in glob(pjoin(args.input, '*.txt')):
+            out = parse_file(input_filepath)
+            filename = psplitext(psplit(input_filepath)[-1])[0]
+            
+            if   args.type == 'csv':
+                output_filepath = pjoin(args.output, filename + '.csv')
+                concat = []
+                for entry in out:
+                    df = pd.DataFrame(entry['data'], columns=['date', 'magnitude', 'error_margin', 'airmass'])
+                    concat.append(df)
+                
+                df_out = pd.concat(concat)
+                df_out.to_csv(output_filepath, index=False)
+                print('wrote: %s' % output_filepath)
+                sys.exit()
+            elif args.type == 'json':
+                output_filepath = pjoin(args.output, filename + '.json')
+                with open(output_filepath, 'w') as ofile:
+                    ofile.write(json.dumps(out))
+                print('wrote: %s' % output_filepath)
+            
+
