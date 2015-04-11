@@ -22,8 +22,6 @@ def get_interpolater(v_wavelength, v_flux):
     return scipy.interpolate.interp1d(v_wavelength, v_flux, 'cubic')
 
 def classify(v_wavelength, v_flux, nbest=5):
-    v_wavelength = d.wavelength
-    v_flux = d.flux
     interpolater = get_interpolater(v_wavelength, v_flux)
 
     dresult = {}
