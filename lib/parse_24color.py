@@ -1,6 +1,9 @@
 '''
 ad-hoc parser for PDS3
 specifically those from http://sbn.psi.edu/pds/resource/24color.html
+
+example usage:
+python parse_24color.py EAR_A_DBP_3_RDR_24COLOR_V2_1
 '''
 import sys
 
