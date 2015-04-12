@@ -41,13 +41,14 @@ if __name__ == '__main__':
 
     import argparse
     from glob import glob
+    import os
     from os.path import join as pjoin
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--directory', help='the lightcurve extracted directory')
+    parser.add_argument('-i', '--input', help='the lightcurve zipfile or its extracted directory')
     args = parser.parse_args()
 
-    if not args.directory or not os.path.exists(args.directory):
+    if not args.input or not os.path.exists(args.input):
         parser.print_help()
 
         print('''
@@ -57,8 +58,28 @@ if __name__ == '__main__':
         '''% __file__)
         sys.exit()
 
-    file_list = glob(pjoin(args.directory, '*.txt'))[:10]
+    if os.path.isdir(args.input):
+        file_list = glob(pjoin(args.input, '*.txt'))[:10]
+    elif args.input.endswith('.zip'):
+        import tempfile
+        import zipfile
+        import tempfile
+        import os
+        from os.path import join as pjoin
+
+        output_dir = tempfile.mkdtemp()
+        print('zip file given. inflating to %s...' % (output_dir))
+
+        zf = zipfile.ZipFile(args.input, 'r')
+        file_list = []
+        for info in zf.infolist():
+            output_filepath = output_dir + info.filename
+            with open(output_filepath, 'wb') as ofile:
+                ofile.write(zf.read(info.filename))
+            file_list.append(output_filepath)
     
+    print('{} files found.'.format(len(file_list)))
+
     nInputFileList = pe.Node(interface = util.IdentityInterface(fields = ['input_filepath']), name = 'input_file_list')
     nInputFileList.iterables = ('input_filepath', file_list)
     
