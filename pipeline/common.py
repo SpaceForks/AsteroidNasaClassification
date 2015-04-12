@@ -1,5 +1,5 @@
 import os
-from os.path import splitext as psplitext
+from os.path import splitext as psplitext, split as psplit, join as pjoin
 
 from nipype.interfaces.traits_extension import traits # , File
 from nipype.interfaces.base import (
@@ -19,6 +19,7 @@ import json
 from lib import classify_curve as Classifier1
 
 from termcolor import colored
+import pandas as pd
 
 
 ### UTILITY

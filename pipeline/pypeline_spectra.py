@@ -9,6 +9,9 @@ from common import *
 from lib.parse_24color import parse_label_string as parse_pds3_24color_label_string 
 from StringIO import StringIO
 
+from lib import SMASS
+import matplotlib.pyplot as plt
+
 class Classifier1Task(SingleIOTask):
     def _run_interface(self, runtime):
         
@@ -19,10 +22,6 @@ class Classifier1Task(SingleIOTask):
         with open(self._output_filepath, 'w') as ofile:
             ofile.write(json.dumps(res))
         return runtime
-
-
-from lib import SMASS
-import matplotlib.pyplot as plt
 
 class PlotCurveTask(SingleIOTask):
     def _run_interface(self, runtime):
