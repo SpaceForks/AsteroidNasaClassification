@@ -70,3 +70,5 @@ def x_and_y(degrees):
 	x = threshold*math.cos(degrees)
 	y = threshold*math.sin(degrees)
 	return x, y
+
+get_colour()
