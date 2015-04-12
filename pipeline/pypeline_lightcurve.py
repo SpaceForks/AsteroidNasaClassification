@@ -62,8 +62,8 @@ if __name__ == '__main__':
     
     if args.alcdef:
         if os.path.isdir(args.alcdef):
-            file_list = glob(pjoin(args.input, '*.txt'))[:10]
-        elif args.input.endswith('.zip'):
+            file_list = glob(pjoin(args.alcdef, '*.txt'))[:10]
+        elif args.alcdef.endswith('.zip'):
             import tempfile
             import zipfile
             import tempfile
@@ -73,7 +73,7 @@ if __name__ == '__main__':
             output_dir = tempfile.mkdtemp()
             print('zip file given. inflating to %s...' % (output_dir))
 
-            zf = zipfile.ZipFile(args.input, 'r')
+            zf = zipfile.ZipFile(args.alcdef, 'r')
             file_list = []
             for info in zf.infolist():
                 output_filepath = output_dir + info.filename
