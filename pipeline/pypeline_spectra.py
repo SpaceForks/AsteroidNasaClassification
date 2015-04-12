@@ -13,7 +13,7 @@ class Classifier1Task(SingleIOTask):
     def _run_interface(self, runtime):
         
         d = Classifier1.clean_data(Classifier1.smass_text_file_to_dataframe(self.inputs.filepath))
-        res = Classifier1.classify(d.wavelength, d.flux)
+        res = Classifier1.classify(d.wavelength, d.reflectance)
         
         self._output_filepath = os.path.join(os.getcwd(), 'output.json')
         with open(self._output_filepath, 'w') as ofile:
@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 class PlotCurveTask(SingleIOTask):
     def _run_interface(self, runtime):
         d = SMASS.smass_text_file_to_dataframe(self.inputs.filepath)
-        plot = d.plot(kind='scatter', marker='.', x='wavelength', y='flux')
+        plot = d.plot(kind='scatter', marker='.', x='wavelength', y='reflectance')
 
         self._output_filepath = os.path.join(os.getcwd(), 'output.png')
         plt.savefig(self._output_filepath)
