@@ -11,34 +11,34 @@ mean_spectra_filepath = pabspath(pjoin(psplit(pabspath(__file__))[0],
 dmeanspec = pd.read_csv(mean_spectra_filepath, skiprows=1)
 
 def clean_data(d):
-    mn = d.flux.mean()
-    sd = d.flux.std()
-    d_no_outlier = d[np.abs(d.flux - mn)/sd < 3]
+    mn = d.reflectance.mean()
+    sd = d.reflectance.std()
+    d_no_outlier = d[np.abs(d.reflectance - mn)/sd < 3]
     return d_no_outlier.groupby('wavelength').apply(lambda x: x.mean())
     
 def normalize(v, to=1.0):
     return (v-v.min())/ (v.max()-v.min()) * to
     
-def get_interpolater(v_wavelength, v_flux):
-    return scipy.interpolate.interp1d(v_wavelength, v_flux, 'cubic')
+def get_interpolater(v_wavelength, v_reflectance):
+    return scipy.interpolate.interp1d(v_wavelength, v_reflectance, 'cubic', bounds_error=False)
 
-def classify(v_wavelength, v_flux, nbest=5):
-    interpolater = get_interpolater(v_wavelength, v_flux)
-
+def classify(v_wavelength, v_reflectance, nbest=5):
+    interpolater = get_interpolater(v_wavelength, v_reflectance)
+    
     dresult = {}
-    dmeanspec.Wavelength
     for col in dmeanspec.columns:
         if col == 'Wavelength':
             continue
-        matched_flux = interpolater(dmeanspec.Wavelength)
-        dresult[col] = ((normalize(matched_flux) - normalize(dmeanspec[col]))**2).mean()
+        # only match within the domain that exists in the input set
+        # dmeanspec.Wavelength[]
+        restricted_index = (dmeanspec.Wavelength > v_wavelength.min()) & (dmeanspec.Wavelength < v_wavelength.max())
+        matched_reflectance = interpolater(dmeanspec.Wavelength[restricted_index])
+        dresult[col] = ((normalize(matched_reflectance) - normalize(dmeanspec[col][restricted_index]))**2).mean()
     
     # pick the best
     res = [(diff, name) for name, diff in dresult.items()]
     res.sort()
     return [(v,k) for k,v in res][:nbest]
-
-
 
 if __name__ == '__main__':
 
@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
     input_filepath = os.path.expanduser('~/Dropbox/devsync/dataproc/data/smass_catalog/data/spex/sp41/a000001.sp41.txt')
     d = clean_data(smass_text_file_to_dataframe(input_filepath))
-    res = classify(d.wavelength, d.flux)
-
+    res = classify(d.wavelength, d.reflectance)
+    
     legend_text = []
     best = None
     for name,diff in res[:5]:
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         plt.plot(dmeanspec.Wavelength, normalize(dmeanspec[name]))
 
     # FIXME rerun slow stuff :-(
-    interpolater = get_interpolater(d.wavelength, d.flux)
+    interpolater = get_interpolater(d.wavelength, d.reflectance)
     plt.scatter(dmeanspec.Wavelength, normalize(interpolater(dmeanspec.Wavelength)))
     legend_text.append('target')
     plt.legend(legend_text)

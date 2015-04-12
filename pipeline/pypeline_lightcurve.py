@@ -1,8 +1,12 @@
+'''
+        example call: python pypeline_lightcurve.py -p ALCDEF
+
+        runs workflow on the dir... generates csv
+'''
 from common import *
 from lib.parse_ALCDEF import parse_file as parse_ALCDEF_file
 
-import pandas as pd
-import json
+from StringIO import StringIO
 
 class ALCDEFOutputSpec(TraitedSpec):
     csv_filepath = traits.File()
@@ -36,7 +40,6 @@ class ALCDEFConversionTask(BaseInterface):
                 
         return runtime
 
-
 if __name__ == '__main__':
 
     import argparse
@@ -44,72 +47,66 @@ if __name__ == '__main__':
     import os
     from os.path import join as pjoin
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', help='the lightcurve zipfile or its extracted directory')
-    args = parser.parse_args()
-
-    if not args.input or not os.path.exists(args.input):
-        parser.print_help()
-
-        print('''
-        example call: python %s -d path/to/ALCDEF
-
-        runs workflow on the dir
-        '''% __file__)
-        sys.exit()
-
-    if os.path.isdir(args.input):
-        file_list = glob(pjoin(args.input, '*.txt'))[:10]
-    elif args.input.endswith('.zip'):
-        import tempfile
-        import zipfile
-        import tempfile
-        import os
-        from os.path import join as pjoin
-
-        output_dir = tempfile.mkdtemp()
-        print('zip file given. inflating to %s...' % (output_dir))
-
-        zf = zipfile.ZipFile(args.input, 'r')
-        file_list = []
-        for info in zf.infolist():
-            output_filepath = output_dir + info.filename
-            with open(output_filepath, 'wb') as ofile:
-                ofile.write(zf.read(info.filename))
-            file_list.append(output_filepath)
-    
-    print('{} files found.'.format(len(file_list)))
-
-    nInputFileList = pe.Node(interface = util.IdentityInterface(fields = ['input_filepath']), name = 'input_file_list')
-    nInputFileList.iterables = ('input_filepath', file_list)
-    
-    nALCDEFConversion = pe.Node(interface = ALCDEFConversionTask(), name='alcdef_conversion')
+    # preprocessing: read various lightcurve data, output unified structures (csv)
+    wf_preproc = pe.Workflow(name='lightcurve_workflow')
+    wf_preproc.config['execution']['crashdump_dir'] = 'crashdump'
+    # change me
+    wf_preproc.base_dir = '/tmp/wf-asteroid'
     
     nDataSink = pe.Node(interface=nio.DataSink(parameterization=False), name='datasink')
     nDataSink.inputs.base_directory = '/tmp/asteroid-datasink'
-    
-    wf = pe.Workflow(name='lightcurve_workflow')
-    wf.config['execution']['crashdump_dir'] = 'crashdump'
-    # change me
-    wf.base_dir = '/tmp/wf-asteroid'
-    
-    # substitutions for datasink
-    def make_substitution(input_filepath):
-        import os.path as p
-        filename_root = p.splitext(p.split(input_filepath)[1])[0]
-        return [("output", filename_root)]
 
-    wf.connect([
-        (nInputFileList, nALCDEFConversion, [('input_filepath', 'filepath')]),
-        (nALCDEFConversion, NodePrinter.create(), [('json_filepath', 'input')]),
-        (nALCDEFConversion, NodePrinter.create(), [('csv_filepath', 'input')]),
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--alcdef', help='the ALCDEF zipfile or its extracted directory')
+    args = parser.parse_args()
+    
+    if args.alcdef:
+        if os.path.isdir(args.alcdef):
+            file_list = glob(pjoin(args.alcdef, '*.txt'))[:10]
+        elif args.alcdef.endswith('.zip'):
+            import tempfile
+            import zipfile
+            import tempfile
+            import os
+            from os.path import join as pjoin
 
-        (nInputFileList, nDataSink, [(("input_filepath", make_substitution), "substitutions")]),
-        
-        (nALCDEFConversion, nDataSink, [('json_filepath', 'json')]),
-        (nALCDEFConversion, nDataSink, [('csv_filepath', 'csv')]),
+            output_dir = tempfile.mkdtemp()
+            print('zip file given. inflating to %s...' % (output_dir))
+
+            zf = zipfile.ZipFile(args.alcdef, 'r')
+            file_list = []
+            for info in zf.infolist():
+                output_filepath = output_dir + info.filename
+                with open(output_filepath, 'wb') as ofile:
+                    ofile.write(zf.read(info.filename))
+                file_list.append(output_filepath)
+    
+        print('{} files found.'.format(len(file_list)))
+
+        nInputFileList = pe.Node(interface = util.IdentityInterface(fields = ['input_filepath']), name = 'input_file_list')
+        nInputFileList.iterables = ('input_filepath', file_list)
+
+        nALCDEFConversion = pe.Node(interface = ALCDEFConversionTask(), name='alcdef_conversion')
+
+        # substitutions for datasink
+        def make_substitution(input_filepath):
+            import os.path as p
+            filename_root = p.splitext(p.split(input_filepath)[1])[0]
+            return [("output", p.join('ALCDEF', filename_root))]
+
+        wf_preproc.connect([
+            (nInputFileList, nALCDEFConversion, [('input_filepath', 'filepath')]),
+            (nInputFileList, nDataSink, [(("input_filepath", make_substitution), "substitutions")]),
+
+            # (nALCDEFConversion, nDataSink, [('json_filepath', 'json')]),
+            (nALCDEFConversion, nDataSink, [('csv_filepath', 'csv')]),
+            ])
+
+    wf_preproc.connect([
+        (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
         ])
-    wf.write_graph()
-    res = wf.run()
+
+    wf_preproc.write_graph()
+    res = wf_preproc.run()
 
 

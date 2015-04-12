@@ -4,6 +4,11 @@ attempt to convert it into a luigi Task
 '''
 
 import os
+import sys
+sys.path.append('..')
+from lib.SMASS import *
+from lib import classify_curve as Classifier1
+
 import shutil
 from termcolor import colored
 import time
