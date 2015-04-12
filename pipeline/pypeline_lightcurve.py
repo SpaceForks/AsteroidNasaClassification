@@ -1,16 +1,11 @@
 '''
         example call: python pypeline_lightcurve.py -p ALCDEF
-        example call: python pypeline_lightcurve.py -p EAR_A_DBP_3_RDR_24COLOR_V2_1
 
         runs workflow on the dir... generates csv
 '''
 from common import *
 from lib.parse_ALCDEF import parse_file as parse_ALCDEF_file
-from lib.parse_24color import parse_label_string as parse_pds3_24color_label_string 
-from os.path import split as psplit
 
-import pandas as pd
-import json
 from StringIO import StringIO
 
 class ALCDEFOutputSpec(TraitedSpec):
@@ -45,35 +40,6 @@ class ALCDEFConversionTask(BaseInterface):
                 
         return runtime
 
-class PDS324ColorConversionTask(BaseInterface):
-    input_spec = SimpleFileInputSpec
-    output_spec = ALCDEFOutputSpec
-
-    def _list_outputs(self):
-        outputs = self.output_spec().get()
-        for trait_name in outputs.keys():
-            outputs[trait_name] = getattr(self, '_%s'%trait_name)
-        return outputs
-    
-    def _run_interface(self, runtime):
-        dlbl = parse_pds3_24color_label_string(open(self.inputs.filepath).read())
-        
-        tab_filepath = pjoin(psplit(self.inputs.filepath)[0], dlbl['^TABLE'].strip('"'))
-        sio = StringIO(open(tab_filepath).read())
-        tab = pd.read_table(sio, sep='\s+', header=None)
-        sio.close()
-        
-        ncol = int(dlbl['TABLE'][0]['COLUMNS'])
-        tab.columns = [col['NAME'].strip('"') for col in dlbl['TABLE'][0]['COLUMN']]
-        
-        self._json_filepath = os.path.join(os.getcwd(), 'output.json')
-        # with open(self._json_filepath, 'w') as ofile:
-        #     ofile.write(json.dumps(out))
-        
-        self._csv_filepath = os.path.join(os.getcwd(), 'output.csv')
-        tab.to_csv(self._csv_filepath, index=False)
-        return runtime
-
 if __name__ == '__main__':
 
     import argparse
@@ -92,7 +58,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--alcdef', help='the ALCDEF zipfile or its extracted directory')
-    parser.add_argument('-p', '--pds3_24color', help='PDS3 24 color extracted directory')
     args = parser.parse_args()
     
     if args.alcdef:
@@ -136,27 +101,6 @@ if __name__ == '__main__':
             # (nALCDEFConversion, nDataSink, [('json_filepath', 'json')]),
             (nALCDEFConversion, nDataSink, [('csv_filepath', 'csv')]),
             ])
-    elif args.pds3_24color:
-
-        file_list = glob(pjoin(args.pds3_24color, 'data', 'data4', '*.lbl'))
-        file_list = file_list[:3]
-        nInputFileList = pe.Node(interface = util.IdentityInterface(fields = ['input_filepath']), name = 'input_file_list')
-        nInputFileList.iterables = ('input_filepath', file_list)
-
-        nPDS324ColorConversionTask = pe.Node(interface = PDS324ColorConversionTask(), name='pds3_24color_conversion')
-
-        # substitutions for datasink
-        def make_substitution(input_filepath):
-            import os.path as p
-            filename_root = p.splitext(p.split(input_filepath)[1])[0]
-            return [('output', p.join('PDS3_24COLOR', filename_root))]
-        wf_preproc.connect([
-            (nInputFileList, nPDS324ColorConversionTask, [('input_filepath', 'filepath')]),
-            (nInputFileList, nDataSink, [(("input_filepath", make_substitution), "substitutions")]),
-
-            (nPDS324ColorConversionTask, nDataSink, [('csv_filepath', 'csv')]),
-            ])
-
 
     wf_preproc.connect([
         (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
