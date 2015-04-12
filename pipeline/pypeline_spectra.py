@@ -12,15 +12,38 @@ from StringIO import StringIO
 from lib import SMASS
 import matplotlib.pyplot as plt
 
-class Classifier1Task(SingleIOTask):
+import DataPyper
+
+
+
+
+class DataFrameInputSpec(TraitedSpec):                                                                                                 
+    data_frame = traits.Any(desc = "input Pandas DataFrame object")
+    
+class Classifier1Task(BaseInterface):
+    input_spec = DataFrameInputSpec
+    output_spec = SimpleFileOutputSpec
+    
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        for trait_name in outputs.keys():
+            outputs[trait_name] = getattr(self, '_%s'%trait_name)
+        return outputs
+    
     def _run_interface(self, runtime):
+        res = Classifier1.classify(self.inputs.data_frame.wavelength, self.inputs.data_frame.reflectance)
         
-        d = Classifier1.clean_data(Classifier1.smass_text_file_to_dataframe(self.inputs.filepath))
-        res = Classifier1.classify(d.wavelength, d.reflectance)
-        
-        self._output_filepath = os.path.join(os.getcwd(), 'output.json')
-        with open(self._output_filepath, 'w') as ofile:
+        self._filepath = os.path.join(os.getcwd(), 'output.json')
+        with open(self._filepath, 'w') as ofile:
             ofile.write(json.dumps(res))
+        return runtime
+
+
+class CleanSMASSTask(SingleIOTask):
+    def _run_interface(self, runtime):
+        d = Classifier1.clean_data(Classifier1.smass_text_file_to_dataframe(self.inputs.filepath))
+        self._output_filepath = os.path.join(os.getcwd(), 'output.csv')
+        d.to_csv(self._output_filepath)
         return runtime
 
 class PlotCurveTask(SingleIOTask):
@@ -90,6 +113,10 @@ if __name__ == '__main__':
     nDataSink = pe.Node(interface=nio.DataSink(parameterization=False), name='datasink')
     nDataSink.inputs.base_directory = '/tmp/asteroid-datasink'
 
+    nCSVFile = pe.Node(interface = CSVFile(), name='to_csv')
+
+    nClassifier1Task = pe.Node(interface = Classifier1Task(), name='classifier_1')
+    nPlotCurveTask = pe.Node(interface = PlotCurveTask(), name='curveplotter_1')
 
     if args.directory and os.path.exists(args.directory):
 
@@ -105,16 +132,11 @@ if __name__ == '__main__':
         nInputFileList = pe.Node(interface = util.IdentityInterface(fields = ['input_filepath']), name = 'input_file_list')
         nInputFileList.iterables = ('input_filepath', file_list)
 
-        nClassifier1Task = pe.Node(interface = Classifier1Task(), name='classifier_1')
-        nPlotCurveTask = pe.Node(interface = PlotCurveTask(), name='curveplotter_1')
-
         wf.connect([
             # (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
-            (nInputFileList, nClassifier1Task, [('input_filepath', 'filepath')]),
-            (nInputFileList, nPlotCurveTask, [('input_filepath', 'filepath')]),
+            (nInputFileList, CleanSMASSTask, [('input_filepath', 'filepath')]),
+            (CleanSMASSTask, nPlotCurveTask, [('filepath', 'filepath')]),
             # (nClassifier1Task, NodePrinter.create(), [('filepath', 'input')]),
-
-            (nClassifier1Task, nDataSink, [('filepath', 'result')]),
             ])
 
 
@@ -137,7 +159,14 @@ if __name__ == '__main__':
             (nInputFileList, nDataSink, [(("input_filepath", make_substitution), "substitutions")]),
 
             (nPDS324ColorConversionTask, nDataSink, [('csv_filepath', 'csv')]),
+            (nPDS324ColorConversionTask, nCSVFile, [('csv_filepath', 'csv_filepath')]),
+
             ])
+
+    wf.connect([
+        (nCSVFile, nClassifier1Task, [('data_frame', 'data_frame')]),
+        (nClassifier1Task, nDataSink, [('filepath', 'classification_result')]),
+        ])
     
     wf.write_graph()
     res = wf.run()
