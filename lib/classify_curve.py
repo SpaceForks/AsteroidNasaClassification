@@ -20,7 +20,7 @@ def normalize(v, to=1.0):
     return (v-v.min())/ (v.max()-v.min()) * to
     
 def get_interpolater(v_wavelength, v_reflectance):
-    return scipy.interpolate.interp1d(v_wavelength, v_reflectance, 'cubic')
+    return scipy.interpolate.interp1d(v_wavelength, v_reflectance, 'cubic', bounds_error=False)
 
 def classify(v_wavelength, v_reflectance, nbest=5):
     interpolater = get_interpolater(v_wavelength, v_reflectance)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     input_filepath = os.path.expanduser('~/Dropbox/devsync/dataproc/data/smass_catalog/data/spex/sp41/a000001.sp41.txt')
     d = clean_data(smass_text_file_to_dataframe(input_filepath))
     res = classify(d.wavelength, d.reflectance)
-
+    
     legend_text = []
     best = None
     for name,diff in res[:5]:
