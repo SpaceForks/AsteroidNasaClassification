@@ -24,21 +24,21 @@ def get_interpolater(v_wavelength, v_reflectance):
 
 def classify(v_wavelength, v_reflectance, nbest=5):
     interpolater = get_interpolater(v_wavelength, v_reflectance)
-
+    
     dresult = {}
-    dmeanspec.Wavelength
     for col in dmeanspec.columns:
         if col == 'Wavelength':
             continue
-        matched_reflectance = interpolater(dmeanspec.Wavelength)
-        dresult[col] = ((normalize(matched_reflectance) - normalize(dmeanspec[col]))**2).mean()
+        # only match within the domain that exists in the input set
+        # dmeanspec.Wavelength[]
+        restricted_index = (dmeanspec.Wavelength > v_wavelength.min()) & (dmeanspec.Wavelength < v_wavelength.max())
+        matched_reflectance = interpolater(dmeanspec.Wavelength[restricted_index])
+        dresult[col] = ((normalize(matched_reflectance) - normalize(dmeanspec[col][restricted_index]))**2).mean()
     
     # pick the best
     res = [(diff, name) for name, diff in dresult.items()]
     res.sort()
     return [(v,k) for k,v in res][:nbest]
-
-
 
 if __name__ == '__main__':
 
