@@ -24,8 +24,9 @@ def get_interpolater(v_wavelength, v_reflectance):
 
 def classify(v_wavelength, v_reflectance, nbest=5):
     interpolater = get_interpolater(v_wavelength, v_reflectance)
-    
+
     dresult = {}
+    dmeanspec.Wavelength
     for col in dmeanspec.columns:
         if col == 'Wavelength':
             continue
@@ -45,12 +46,7 @@ if __name__ == '__main__':
 
     input_filepath = os.path.expanduser('~/Dropbox/devsync/dataproc/data/smass_catalog/data/spex/sp41/a000001.sp41.txt')
     d = clean_data(smass_text_file_to_dataframe(input_filepath))
-
-
-    # res = classify(d.wavelength, d.reflectance)
-    print dmeanspec.A_Mean
-    res = classify(dmeanspec.Wavelength, dmeanspec.A_Mean)
-
+    res = classify(d.wavelength, d.reflectance)
 
     legend_text = []
     best = None
@@ -60,13 +56,11 @@ if __name__ == '__main__':
         if best is None:
             best = name
 
-        plt.plot(dmeanspec.Wavelength, (dmeanspec[name]))
+        plt.plot(dmeanspec.Wavelength, normalize(dmeanspec[name]))
 
     # FIXME rerun slow stuff :-(
-    # interpolater = get_interpolater(d.wavelength, d.reflectance)
-    # plt.scatter(dmeanspec.Wavelength, (interpolater(dmeanspec.Wavelength)))
-    interpolater = get_interpolater(dmeanspec.Wavelength, dmeanspec.A_Mean)
-    plt.scatter(dmeanspec.Wavelength, interpolater(dmeanspec.Wavelength))
+    interpolater = get_interpolater(d.wavelength, d.reflectance)
+    plt.scatter(dmeanspec.Wavelength, normalize(interpolater(dmeanspec.Wavelength)))
     legend_text.append('target')
     plt.legend(legend_text)
     plt.show()
