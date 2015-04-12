@@ -47,10 +47,10 @@ class CleanSMASSTask(SingleIOTask):
         return runtime
 
 class PlotCurveTask(SingleIOTask):
+    input_spec = DataFrameInputSpec
+    
     def _run_interface(self, runtime):
-        d = SMASS.smass_text_file_to_dataframe(self.inputs.filepath)
-        plot = d.plot(kind='scatter', marker='.', x='wavelength', y='reflectance')
-
+        plot = self.inputs.data_frame.plot(kind='scatter', marker='.', x='wavelength', y='reflectance')
         self._output_filepath = os.path.join(os.getcwd(), 'output.png')
         plt.savefig(self._output_filepath)
         return runtime
@@ -135,7 +135,6 @@ if __name__ == '__main__':
         wf.connect([
             # (nInputFileList, NodePrinter.create(), [('input_filepath', 'input')]),
             (nInputFileList, CleanSMASSTask, [('input_filepath', 'filepath')]),
-            (CleanSMASSTask, nPlotCurveTask, [('filepath', 'filepath')]),
             # (nClassifier1Task, NodePrinter.create(), [('filepath', 'input')]),
             ])
 
@@ -164,6 +163,7 @@ if __name__ == '__main__':
             ])
 
     wf.connect([
+        (nCSVFile, nPlotCurveTask, [('data_frame', 'data_frame')]),
         (nCSVFile, nClassifier1Task, [('data_frame', 'data_frame')]),
         (nClassifier1Task, nDataSink, [('filepath', 'classification_result')]),
         ])
