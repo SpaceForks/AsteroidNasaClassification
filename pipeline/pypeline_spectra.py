@@ -57,7 +57,7 @@ class PDS324ColorConversionTask(BaseInterface):
         sio.close()
         
         ncol = int(dlbl['TABLE'][0]['COLUMNS'])
-        tab.columns = [col['NAME'].strip('"') for col in dlbl['TABLE'][0]['COLUMN']]
+        tab.columns = [col['NAME'].strip('"').lower() for col in dlbl['TABLE'][0]['COLUMN']]
         
         self._json_filepath = os.path.join(os.getcwd(), 'output.json')
         # with open(self._json_filepath, 'w') as ofile:
