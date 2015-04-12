@@ -1,0 +1,34 @@
+
+
+* dependencies
+
+pip install networkx traits numpy pandas scipy
+
+then run
+
+
+
+** lightcurve pipeline
+
+   python pypeline_lightcurve.py -i PATH/TO/ALCDEF_ALL.zip
+
+   http://www.minorplanetcenter.net/light_curve2/light_curve.php
+
+*** current functionality
+
+    reads ALCDEF_ALL.zip and produces a directory with files parsed
+    and extracted to csv and json
+    
+** spectra pipeline
+
+   python pypeline_spectra.py
+
+   currently runs against data taken from the table in
+   http://smass.mit.edu/catalog.php
+
+*** current functionality
+
+    status: proof of concept
+
+    reads spectra files from the catalog and runs a naive classifier
+    on it.
