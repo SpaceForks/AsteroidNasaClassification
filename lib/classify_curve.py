@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import scipy.interpolate
 import os
+from os.path import join as pjoin, split as psplit, abspath as pabspath
 import sys
 from SMASS import *
 
-# FIXME FIXME FIXME
-mean_spectra_filepath = '/tmp/busdemeo-meanspectra.csv'
+mean_spectra_filepath = pabspath(pjoin(psplit(pabspath(__file__))[0],
+                                       '..', 'static', 'busdemeo-meanspectra.csv'))
 dmeanspec = pd.read_csv(mean_spectra_filepath, skiprows=1)
 
 def clean_data(d):
