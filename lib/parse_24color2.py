@@ -17,7 +17,7 @@ clean_bounds = [
         ([25, 146, 190], [62, 174, 250]),       # Yellow
 ]
 
-threshold = 189 #pixels
+threshold = 100 #pixels
 p_to_cm   = 0.0264583333333334
 
  
@@ -35,7 +35,10 @@ def get_colour():
 	# show the images
 		cv2.imshow("images", np.hstack([image, output]))
 		cv2.waitKey(0)
-	checker(output)	
+	if checker(output)
+		print "ASTROID!"
+	else
+		print "NOT ASTROID!"
 
 # Check to see that yellow and blue colourings are close to one another
 # Pass in a 2D array of the pixel RGB values
@@ -48,17 +51,21 @@ def checker(image):
 					if is_b([x,y], image):
 						return true
 	return false
-				
+
+# Is the pixel "blue"
 def is_b(pixel, pixelx, pixely, image):
 	if [86, 31, 4] <= pixel and pixel <= [220, 88, 50]:
 		return true
 
+# Distance between two points
 def distance(x, y, x1, y1):
 	return math.sqrt((x-x1)**2 + (y-y1)**2)
 
+# Convert pixels to cm
 def p_cm(pixel_distance):
 	return pixel_distance * p_to_cmi
 
+# Find x y coodinates for area around a pixel
 def x_and_y(degrees):
 	x = threshold*math.cos(degrees)
 	y = threshold*math.sin(degrees)
